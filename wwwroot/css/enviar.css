@@ -1,0 +1,15 @@
+/* Estilos exclusivos: enviar. */
+
+.message-preview {
+    background:#edf2ee;
+    padding:1.5rem;
+}
+
+.premium-ui .message-preview {
+    min-height: 300px;
+    border-radius: 0 0 var(--bs-card-inner-border-radius) var(--bs-card-inner-border-radius);
+    background-color: #f1f3e9;
+    background-image: radial-gradient(#d9dfcf 1px,transparent 1px);
+    background-size: 18px 18px;
+    padding: 32px;
+}

@@ -7,7 +7,7 @@ Sistema recriado em **ASP.NET Core MVC / .NET 10**, com Razor, C#, Dapper e MySQ
 Requisito: SDK .NET 10 e acesso ao MySQL e à Evolution configurados.
 
 ```powershell
-cd C:\Users\Dell\Desktop\projetos\disparo-whatsapp
+cd C:\disparo-whatsapp
 dotnet run --project DisparoApi.csproj --launch-profile DisparoWhatsApp
 ```
 

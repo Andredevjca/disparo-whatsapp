@@ -1,0 +1,15 @@
+/* Estilos exclusivos: massa. */
+
+.progress {
+    height:10px;
+}
+
+.premium-ui .progress {
+    height: 7px;
+    background: #edf2e8;
+    border-radius: 8px;
+}
+
+#bulk-bar {
+    width: 0%;
+}
