@@ -1,3 +1,43 @@
-<section class="card card-body mb-4"><form id="history-filter" class="row g-3 align-items-end"><div class="col-md-3"><label for="filter-name" class="form-label">Nome</label><input id="filter-name" name="nome" class="form-control" /></div><div class="col-md-3"><label for="filter-phone" class="form-label">Telefone</label><input id="filter-phone" name="telefone" class="form-control" /></div><div class="col-md-3"><label for="filter-status" class="form-label">Status</label><select id="filter-status" name="status" class="form-select"><option value="">Todos</option><option>ENVIADO</option><option>ERRO</option><option>PENDENTE</option></select></div><div class="col-md-3"><label for="filter-instance" class="form-label">Instância</label><input id="filter-instance" name="instancia" class="form-control" /></div><div class="col-md-3"><label for="filter-from" class="form-label">De</label><input id="filter-from" name="de" type="date" class="form-control" /></div><div class="col-md-3"><label for="filter-to" class="form-label">Até</label><input id="filter-to" name="ate" type="date" class="form-control" /></div><div class="col-md-3"><label for="filter-group" class="form-label">Grupo de importação</label><select id="filter-group" name="grupoImportacaoId" class="form-select"><option value="">Todos</option></select></div><div class="col-md-3"><button class="btn btn-primary"><i class="fa-solid fa-filter"></i> Filtrar</button><button type="reset" class="btn btn-outline-secondary">Limpar</button></div></form></section>
-<section class="card card-body"><div id="history">Carregando histórico…</div><div id="history-pager" class="mt-3"></div></section>
-<div class="modal fade" id="detail-modal" tabindex="-1" aria-labelledby="detail-title"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h2 class="modal-title" id="detail-title">Detalhes do envio</h2><button class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div><div class="modal-body" id="detail-content"></div></div></div></div>
+<section class="card card-body mb-4">
+    <form id="history-filter" class="row g-3 align-items-end">
+        <div class="col-md-3"><label for="filter-name" class="form-label">Nome</label><input id="filter-name"
+                                                                                                 name="nome" class="form-control" /></div>
+            <div class="col-md-3"><label for="filter-phone" class="form-label">Telefone</label><input id="filter-phone"
+                                                                                                          name="telefone" class="form-control" /></div>
+                <div class="col-md-3"><label for="filter-status" class="form-label">Status</label><select id="filter-status"
+                                                                                                          name="status" class="form-select">
+                    <option value="">Todos</option>
+                    <option>ENVIADO</option>
+                    <option>ERRO</option>
+                    <option>PENDENTE</option>
+                </select></div>
+                <div class="col-md-3"><label for="filter-instance" class="form-label">Instância</label>
+                    <input id="filter-instance" name="instancia" class="form-control" />
+                </div>
+                <div class="col-md-3"><label for="filter-from" class="form-label">De</label><input id="filter-from" name="de"
+                                                                                                       type="date" class="form-control" /></div>
+                    <div class="col-md-3"><label for="filter-to" class="form-label">Até</label><input id="filter-to" name="ate"
+                                                                                                          type="date" class="form-control" /></div>
+                        <div class="col-md-3"><label for="filter-group" class="form-label">Grupo de importação</label><select
+                            id="filter-group" name="grupoImportacaoId" class="form-select">
+                            <option value="">Todos</option>
+                        </select></div>
+                        <div class="col-md-3"><button class="btn btn-primary"><i class="fa-solid fa-filter"></i> Filtrar</button><button
+                            type="reset" class="btn btn-outline-secondary  ms-2">Limpar</button></div>
+                        </form>
+                    </section>
+                    <section class="card card-body">
+                        <div id="history">Carregando histórico…</div>
+                        <div id="history-pager" class="mt-3"></div>
+                    </section>
+                    <div class="modal fade" id="detail-modal" tabindex="-1" aria-labelledby="detail-title">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h2 class="modal-title" id="detail-title">Detalhes do envio</h2><button class="btn-close"
+                                                                                                            data-bs-dismiss="modal" aria-label="Fechar"></button>
+                                </div>
+                                <div class="modal-body" id="detail-content"></div>
+                            </div>
+                        </div>
+                    </div>
