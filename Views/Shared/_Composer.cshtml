@@ -1,4 +1,15 @@
-<div class="mb-3"><label for="instance" class="form-label">Conta WhatsApp</label><select id="instance" name="instance" class="form-select" required><option value="">Carregando contas…</option></select><div class="form-text">Selecione uma conta conectada para enviar.</div></div>
-<div class="mb-3"><label for="template" class="form-label">Modelo de mensagem</label><select id="template" name="templateId" class="form-select"><option value="">Mensagem personalizada</option></select></div>
-<div class="mb-3"><label for="message" class="form-label">Mensagem</label><textarea id="message" name="mensagem" class="form-control" rows="7" placeholder="Digite sua mensagem…"></textarea><div class="form-text">Use {{nome}}, {{telefone}} e os nomes das colunas da planilha para personalizar.</div></div>
+<div class="mb-3"><label for="instance" class="form-label">Conta WhatsApp</label><select id="instance" name="instance"
+                                                                                         class="form-select" required>
+    <option value="">Carregando contas…</option>
+</select>
+<div class="form-text">Selecione uma conta conectada para enviar.</div>
+</div>
+<div class="mb-3"><label for="template" class="form-label">Modelo de mensagem</label><select id="template"
+                                                                                             name="templateId" class="form-select">
+    <option value="">Mensagem personalizada</option>
+</select></div>
+<div class="mb-3"><label for="message" class="form-label">Mensagem</label><textarea id="message" name="mensagem"
+                                                                                        class="form-control" rows="7" placeholder="Digite sua mensagem…"></textarea>
+    <div class="form-text">Use {{nome}}, {{telefone}} e os nomes das colunas da planilha para personalizar.</div>
+</div>
 <partial name="_ImageInput" />
