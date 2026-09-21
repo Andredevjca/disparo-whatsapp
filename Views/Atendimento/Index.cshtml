@@ -2,5 +2,42 @@
     <link href="~/css/atendimento.css" rel="stylesheet" data-page-style asp-append-version="true" />
 }
 
-<section class="card card-body mb-3"><div class="d-flex flex-wrap gap-2 align-items-center"><label for="sync-instance" class="form-label mb-0">Conta</label><select id="sync-instance" class="form-select w-auto" aria-label="Conta para sincronizar"><option value="">Conta padrão</option></select><button id="sync" class="btn btn-outline-primary"><i class="fa-solid fa-rotate"></i> Sincronizar conversas</button><label class="d-flex align-items-center gap-2"><input id="force-sync" type="checkbox" class="form-check-input" /> Sincronização completa</label><span id="sync-status" class="text-muted" role="status"></span></div></section>
-<section class="card chat-layout"><aside class="chat-sidebar"><form id="conversation-search" class="p-3 border-bottom d-flex gap-2"><input name="busca" class="form-control" placeholder="Buscar conversa" aria-label="Buscar conversa" /><button class="btn btn-outline-secondary" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass"></i></button></form><div id="conversations" class="conversation-list">Carregando conversas…</div><div id="conversations-pager" class="p-2"></div></aside><div class="chat-main"><div id="chat-header" class="p-3 border-bottom"><strong>Selecione uma conversa</strong></div><div id="chat-messages" class="chat-messages"><div class="empty-state"><i class="fa-regular fa-comments"></i><p>Escolha um contato para visualizar as mensagens.</p></div></div><form id="chat-form" class="p-3 border-top d-flex gap-2"><textarea id="chat-text" name="texto" class="form-control" rows="2" placeholder="Digite sua resposta…" aria-label="Resposta" required disabled></textarea><button class="btn btn-primary" disabled><i class="fa-solid fa-paper-plane"></i> Enviar</button></form></div></section>
+<section class="card card-body mb-3">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <label for="sync-instance" class="form-label mb-0">Conta</label>
+        <select id="sync-instance" class="form-select w-auto" aria-label="Conta para sincronizar">
+            <option value="">Conta padrão</option>
+        </select>
+        <button id="sync" class="btn btn-outline-primary"><i class="fa-solid fa-rotate"></i> Sincronizar conversas</button>
+            <label class="d-flex align-items-center gap-2">
+                <input id="force-sync" type="checkbox" class="form-check-input" /> Sincronização completa
+            </label>
+            <span id="sync-status" class="text-muted" role="status"></span>
+        </div>
+    </section>
+    <section class="card chat-layout">
+        <aside class="chat-sidebar">
+            <form id="conversation-search" class="p-3 border-bottom d-flex gap-2">
+                <input name="busca" class="form-control" placeholder="Buscar conversa" aria-label="Buscar conversa" />
+                <button class="btn btn-outline-secondary" aria-label="Buscar"><i
+                    class="fa-solid fa-magnifying-glass"></i></button>
+                </form>
+                <div id="conversations" class="conversation-list">Carregando conversas…</div>
+                <div id="conversations-pager" class="p-2"></div>
+            </aside>
+            <div class="chat-main">
+                <div id="chat-header" class="p-3 border-bottom"><strong>Selecione uma conversa</strong></div>
+                <div id="chat-messages" class="chat-messages">
+                    <div class="empty-state"><i class="fa-regular fa-comments"></i>
+                        <p>Escolha um contato para visualizar as mensagens.</p>
+                    </div>
+                </div>
+                <form id="chat-form" class="p-3 border-top d-flex gap-2">
+                    <textarea id="chat-text" name="texto" class="form-control" rows="2" placeholder="Digite sua resposta…"
+                              aria-label="Resposta" required disabled></textarea>
+                    <button class="btn btn-primary" disabled><i class="fa-solid fa-paper-plane"></i>
+                        Enviar
+                    </button>
+                </form>
+            </div>
+        </section>
