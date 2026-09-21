@@ -1,4 +1,9 @@
-const $ = (s, root = document) => root.querySelector(s);
+export function mountPage() {
+const pageRoot = document.getElementById('main-content');
+const pageName = document.body.dataset.page;
+const controller = new AbortController();
+const timers = new Set();
+const $ = (s, root = pageRoot) => root.querySelector(s) || (['#connection-badge', 'meta[name="csrf-token"]'].includes(s) ? document.querySelector(s) : null);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date = value => value ? new Date(value).toLocaleString('pt-BR') : '—';
 const number = value => Number(value || 0).toLocaleString('pt-BR');
@@ -15,18 +20,21 @@ const table = (headers, rows) => {
     return rows.length ? `<div class="table-wrap table-responsive"><table class="table table-modern table-hover mb-0"><thead><tr>${headers.map((h,index)=>`<th scope="col"${index===actionColumn?' class="table-actions"':''}>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,index)=>`<td${index===actionColumn?' class="table-actions"':''}>${index===actionColumn?`<div class="table-action-buttons">${c ?? ''}</div>`:c ?? '—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : empty();
 };
 function feedback(message, error = false) {
+    if (controller.signal.aborted) return;
     const el = $('#feedback'); el.hidden = false; el.className = `alert alert-${error ? 'danger' : 'success'}`; el.textContent = message;
     if (error) el.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 async function api(path, method = 'GET', data) {
+    controller.signal.throwIfAborted();
     const headers = {'Accept':'application/json'};
     if (method !== 'GET') headers['X-CSRF-TOKEN'] = $('meta[name="csrf-token"]').content;
     let body;
     if (data instanceof FormData) body = data;
     else if (data !== undefined) { headers['Content-Type'] = 'application/json'; body = JSON.stringify(data); }
-    const response = await fetch(`/api/${path}`, {method, headers, body, credentials:'same-origin'});
+    const response = await fetch(`/api/${path}`, {method, headers, body, credentials:'same-origin', signal:controller.signal});
     if (response.status === 401) { location.assign('/Conta/Entrar?returnUrl=' + encodeURIComponent(location.pathname + location.search)); throw new Error('Sua sessão expirou.'); }
     const text = await response.text();
+    controller.signal.throwIfAborted();
     let result; try { result = text ? JSON.parse(text) : null; } catch { result = null; }
     if (!response.ok) throw new Error(result?.message || result?.erro || (result?.errors && Object.values(result.errors).flat().join(' ')) || `Não foi possível concluir a operação (${response.status}).`);
     return result;
@@ -59,9 +67,10 @@ function pager(selector, page, perPage, total, change) {
     el.onclick = async e => { const b=e.target.closest('[data-page]'); if (!b || b.disabled) return; b.disabled=true; try { await change(Number(b.dataset.page)); } catch(err) { feedback(err.message,true); b.disabled=false; } };
 }
 function poll(task, delay) {
+    if (controller.signal.aborted) return null;
     let busy = false;
     const id = setInterval(async()=>{if(busy || document.hidden) return; busy=true; try {await task();} catch {} finally {busy=false;}},delay);
-    window.addEventListener('pagehide',()=>clearInterval(id),{once:true}); return id;
+    timers.add(id); return id;
 }
 let accounts = [];
 async function loadAccounts() {
@@ -89,7 +98,7 @@ function imageInput() {
     on('#image-file','change',async e=>{
         const file=e.target.files[0]; if(!file) return;
         if(!['image/png','image/jpeg'].includes(file.type) || file.size>5*1024*1024 || !file.size) {e.target.value=''; throw new Error('Selecione uma imagem PNG ou JPEG de até 5 MB.');}
-        const buttons=[...document.querySelectorAll('#send-form button, #bulk-form button, #template-form button')]; buttons.forEach(b=>b.disabled=true);
+        const buttons=[...pageRoot.querySelectorAll('#send-form button, #bulk-form button, #template-form button')]; buttons.forEach(b=>b.disabled=true);
         try {
             const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Não foi possível ler a imagem.'));reader.readAsDataURL(file);});
             setImage({base64:data.split(',')[1],mimeType:file.type,nomeArquivo:file.name});
@@ -269,5 +278,11 @@ async function atendimento() {
     poll(async()=>{try{await refresh();await loadMessages();await syncStatus();}catch(e){$('#sync-status').textContent='Falha ao atualizar: '+e.message;}},5000);
 }
 const pages={Index:dashboard,WhatsApp:whatsapp,Enviar:send,Massa:massa,Modelos:modelos,Historico:historico,Usuarios:usuarios,Configuracoes:configuracoes,Atendimento:atendimento};
-async function init(){try{await pages[document.body.dataset.page]?.();}catch(e){feedback(e.message,true);}if(!['Index','WhatsApp'].includes(document.body.dataset.page)){try{await loadAccounts();}catch{$('#connection-badge').textContent='Conexão indisponível';}}poll(async()=>{try{await loadAccounts();}catch{$('#connection-badge').textContent='Conexão indisponível';}},30000);}
+async function init(){try{await pages[pageName]?.();}catch(e){feedback(e.message,true);}if(!['Index','WhatsApp'].includes(pageName)){try{await loadAccounts();}catch{if(controller.signal.aborted)return;$('#connection-badge').textContent='Conexão indisponível';}}poll(async()=>{try{await loadAccounts();}catch{if(controller.signal.aborted)return;$('#connection-badge').textContent='Conexão indisponível';}},30000);}
 init();
+return () => {
+    controller.abort();
+    timers.forEach(clearInterval);
+    pageRoot.querySelectorAll('.modal').forEach(el => bootstrap.Modal.getInstance(el)?.dispose());
+};
+}
