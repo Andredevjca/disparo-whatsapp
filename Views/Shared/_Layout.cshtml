@@ -1,0 +1,74 @@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{ var action = ViewContext.RouteData.Values["action"]?.ToString(); }
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+    <title>@ViewData["Title"] - Disparo WhatsApp</title>
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+    <link href="~/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet" />
+    <link href="~/css/site.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/disparo.css" rel="stylesheet" asp-append-version="true" />
+    <link href="~/css/premium.css" rel="stylesheet" asp-append-version="true" />
+</head>
+<body class="app-body premium-ui" data-page="@action">
+    <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
+    <aside class="sidebar" aria-label="Menu principal">
+        <a class="sidebar-brand text-decoration-none" href="/">
+            <div class="logo-mark"><i class="fa-brands fa-whatsapp"></i></div>
+            <div class="brand-text"><strong>Disparo<span class="brand-dot">.</span></strong><small>WHATSAPP WORKSPACE</small></div>
+        </a>
+        <div class="workspace-card"><span class="workspace-symbol">D</span><div class="menu-texto"><strong>Meu workspace</strong><small>Central de comunicação</small></div></div>
+        <ul class="sidebar-menu">
+            <li class="menu-label">Workspace</li>
+            @foreach (var item in new[] {
+                ("Index", "/", "fa-solid fa-gauge-high", "Dashboard"),
+                ("WhatsApp", "/WhatsApp", "fa-brands fa-whatsapp", "Contas WhatsApp"),
+                ("Enviar", "/Enviar", "fa-solid fa-paper-plane", "Envio individual"),
+                ("Massa", "/Massa", "fa-solid fa-bullhorn", "Disparos em massa"),
+                ("Atendimento", "/Atendimento", "fa-solid fa-comments", "Atendimento"),
+                ("Modelos", "/Modelos", "fa-solid fa-file-lines", "Modelos"),
+                ("Historico", "/Historico", "fa-solid fa-clock-rotate-left", "Histórico"),
+                ("Usuarios", "/Usuarios", "fa-solid fa-user-gear", "Usuários"),
+                ("Configuracoes", "/Configuracoes", "fa-solid fa-gear", "Configurações") })
+            {
+                @if (item.Item1 == "Usuarios") { <li class="menu-label">Administração</li> }
+                <li><a aria-current="@(action == item.Item1 ? "page" : null)" href="@item.Item2" title="@item.Item4" class="@(action == item.Item1 ? "active" : "")"><i class="@item.Item3"></i><span class="menu-texto">@item.Item4</span></a></li>
+            }
+        </ul>
+        <div class="sidebar-footer">
+            <div class="sidebar-tip"><i class="fa-solid fa-link" aria-hidden="true"></i><strong>Conecte sua operação</strong><p>Gerencie seus números e mantenha suas conversas por perto.</p><a href="/WhatsApp">Gerenciar contas <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div>
+            <span class="sidebar-signature">Seu próximo contato começa aqui.</span>
+        </div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <div class="app-content">
+        <header class="app-header">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-outline-secondary" id="botaoSidebar" aria-label="Alternar menu"><i class="fa-solid fa-bars"></i></button>
+                <nav class="header-breadcrumb" aria-label="Localização"><span>Workspace</span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i><strong>@ViewData["Title"]</strong></nav>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <a href="/WhatsApp" class="badge rounded-pill text-bg-light text-decoration-none" id="connection-badge">Verificando conexão…</a>
+                <div class="user-profile"><span class="user-avatar">@(string.IsNullOrWhiteSpace(User.Identity?.Name) ? "U" : User.Identity.Name.Substring(0, 1).ToUpperInvariant())</span><span class="d-none d-xl-block"><strong>@User.Identity?.Name</strong><small>Meu workspace</small></span></div>
+                <form asp-controller="Conta" asp-action="Sair" method="post"><button class="btn btn-light" title="Sair"><i class="fa-solid fa-right-from-bracket"></i><span class="d-none d-sm-inline">Sair</span></button></form>
+            </div>
+        </header>
+        <main class="app-main" id="main-content" tabindex="-1">
+            <div class="page-heading"><div><span class="eyebrow">SUA CENTRAL DE COMUNICAÇÃO</span><h1>@(action == "Index" ? "Visão geral" : ViewData["Title"])</h1><p class="text-muted mb-0">@ViewData["Description"]</p></div><div class="heading-actions">@if (action == "Index") { <span class="date-chip"><i class="fa-regular fa-calendar" aria-hidden="true"></i> @DateTime.Now.ToString("dd MMM, yyyy", new System.Globalization.CultureInfo("pt-BR"))</span> } else if (action != "Massa") { <a href="/Massa" class="btn btn-primary"><i class="fa-solid fa-plus" aria-hidden="true"></i> Novo disparo</a> }</div></div>
+            <div id="feedback" role="status" aria-live="polite" hidden></div>
+            @RenderBody()
+        </main>
+    </div>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/disparo.js" asp-append-version="true" type="module"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

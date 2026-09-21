@@ -1,0 +1,64 @@
+@model LoginViewModel
+@{
+    Layout = "_LayoutLogin";
+    ViewData["Title"] = "Entrar";
+}
+<div class="login-wrap">
+    <aside class="login-aside">
+        <div>
+            <div class="login-brand">
+                <div class="login-logo"><i class="fa-solid fa-comments"></i></div>
+                <div>
+                    <strong>Disparo.</strong>
+                    <small>WHATSAPP WORKSPACE</small>
+                </div>
+            </div>
+            <div class="login-hide">
+                <span class="login-eyebrow">COMUNICAÇÃO COM SEUS CLIENTES</span>
+                <h2>Grandes relações começam com uma conversa.</h2>
+                <p>Conecte sua equipe aos seus clientes. Uma central para enviar, acompanhar e atender com mais proximidade.</p>
+                <ul class="login-features">
+                    <li><i class="fa-solid fa-paper-plane"></i> Mensagens individuais e em massa</li>
+                    <li><i class="fa-solid fa-users"></i> Importação de contatos</li>
+                    <li><i class="fa-solid fa-comments"></i> Central de atendimento</li>
+                    <li><i class="fa-solid fa-chart-column"></i> Histórico de envios</li>
+                </ul>
+            </div>
+        </div>
+        <div class="login-footer">Acesso restrito a usuários autorizados</div>
+    </aside>
+    <div class="login-panel">
+
+        <main class="login-main">
+            <div class="login-card">
+                <div class="login-access-icon"><i class="fa-solid fa-user-lock" aria-hidden="true"></i></div>
+                <span class="login-eyebrow">BEM-VINDO DE VOLTA</span>
+                <h1>Seu workspace<br />está esperando.</h1>
+                <p class="sub">Entre na sua conta e continue de onde parou.</p>
+                <form asp-action="Entrar" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="erro mb-3"></div>
+                    <div class="mb-3">
+                        <label asp-for="Email">E-mail</label>
+                        <div class="campo">
+                            <span><i class="fa-solid fa-envelope"></i></span>
+                            <input asp-for="Email" placeholder="seu@email.com" autocomplete="username" />
+                        </div>
+                        <span asp-validation-for="Email" class="erro"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Password">Senha</label>
+                        <div class="campo">
+                            <span><i class="fa-solid fa-lock"></i></span>
+                            <input asp-for="Password" autocomplete="current-password" />
+                        </div>
+                        <span asp-validation-for="Password" class="erro"></span>
+                    </div>
+                    <input asp-for="ReturnUrl" type="hidden" />
+                    <button type="submit" class="login-btn">Acessar meu workspace <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </form>
+                <div class="login-hint"><i class="fa-solid fa-lock" aria-hidden="true"></i> Acesso exclusivo para sua equipe.</div>
+            </div>
+        </main>
+    </div>
+</div>

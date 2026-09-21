@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="DisparoApi.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/EnvioImagem.Checks/EnvioImagem.Checks.csproj" />
+    <Project Path="tests/Conexao.Checks/Conexao.Checks.csproj" />
+  </Folder>
+</Solution>

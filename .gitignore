@@ -1,0 +1,55 @@
+# Saidas de compilacao e publicacao
+[Bb]in/
+[Oo]bj/
+[Aa]rtifacts/
+[Pp]ublish/
+publicacao/
+
+# Arquivos pessoais das IDEs
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.sln.iml
+*.DotSettings.user
+
+# Configuracoes locais e segredos
+appsettings.Local.json
+appsettings.*.Local.json
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pfx
+*.p12
+*.key
+*.pubxml.user
+
+# Dependencias restauraveis e resultados de testes
+node_modules/
+packages/
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Logs, temporarios e backups locais
+logs/
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Chaves locais de protecao dos cookies
+Dados/Chaves/
