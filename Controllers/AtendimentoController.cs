@@ -156,6 +156,8 @@ public class AtendimentoController : ControllerBase
             var instancia = !string.IsNullOrWhiteSpace(body?.Instancia)
                 ? body.Instancia
                 : _evoOptions.Instance;
+            if (string.IsNullOrWhiteSpace(instancia))
+                return BadRequest(new { erro = "Selecione uma conta para sincronizar as conversas." });
             if (_monitor.EstaRodando)
                 return Accepted(new { status = "EM_ANDAMENTO", iniciado_em = _monitor.IniciadoEm, mensagem = "Já está sincronizando." });
 

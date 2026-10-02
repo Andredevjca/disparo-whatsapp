@@ -245,17 +245,18 @@ async function configuracoes() {
     on('#settings-form','submit',async()=>{await api('configuracao','PUT',{intervaloMs:Number($('#settings-interval').value)*1000});feedback('Configurações salvas.');});
 }
 async function atendimento() {
-    let conversations=[],selected=null,conversationPage=1,messagePage=1,messages=new Map();
+    let conversations=[],selected=null,conversationPage=1,messagePage=1,messages=new Map(),refreshVersion=0,selectionVersion=0,sending=false;
+    const drafts=new Map();
     const form=$('#chat-form');
     const refresh=async(page=conversationPage)=>{
-        conversationPage=page;const data=await api(`atendimento/conversas?page=${page}&perPage=30&busca=${encodeURIComponent($('#conversation-search').busca.value)}`);conversations=data.rows;
+        const version=++refreshVersion;conversationPage=page;const data=await api(`atendimento/conversas?page=${page}&perPage=30&busca=${encodeURIComponent($('#conversation-search').busca.value)}`);if(version!==refreshVersion)return;conversations=data.rows;
         $('#conversations').innerHTML=conversations.map(c=>`<button type="button" class="conversation ${selected?.id===c.id?'active':''}" data-action="open" data-id="${c.id}"><div class="d-flex justify-content-between gap-2"><strong>${escapeHtml(c.nome || c.nome_whatsapp || c.telefone)}</strong>${c.mensagens_nao_lidas?`<span class="badge text-bg-success">${number(c.mensagens_nao_lidas)}</span>`:''}</div><span class="conversation-preview">${escapeHtml(c.ultima_mensagem || 'Sem mensagens')}</span><small class="text-muted">${escapeHtml(c.instancia)} · ${escapeHtml(date(c.ultima_mensagem_em))}</small></button>`).join('') || empty('Nenhuma conversa encontrada.');
         pager('#conversations-pager',data.page,data.perPage,data.total,refresh);
     };
     const loadMessages=async(older=false)=>{
-        if(!selected)return;const id=selected.id;
+        if(!selected)return;const id=selected.id,version=selectionVersion;
         const requestedPage=older?messagePage+1:1;
-        const data=await api(`atendimento/conversas/${id}/mensagens?page=${requestedPage}&perPage=50`);if(selected?.id!==id)return;
+        const data=await api(`atendimento/conversas/${id}/mensagens?page=${requestedPage}&perPage=50`);if(selected?.id!==id || selectionVersion!==version)return;
         if(older)messagePage=requestedPage;
         const target=$('#chat-messages');const atBottom=target.scrollHeight-target.scrollTop-target.clientHeight<80;const previousHeight=target.scrollHeight;
         for(const m of data.rows)messages.set(m.id,m);
@@ -263,19 +264,36 @@ async function atendimento() {
         target.innerHTML=(hasOlder?'<button id="older-messages" type="button" class="btn btn-light align-self-center">Carregar mensagens anteriores</button>':'')+[...messages.values()].sort((a,b)=>new Date(a.data_mensagem || a.created_at)-new Date(b.data_mensagem || b.created_at)||a.id-b.id).map(m=>`<article class="chat-message ${m.direcao==='ENVIADA'?'sent':''}">${m.tem_imagem?`<img src="/api/atendimento/conversas/${id}/mensagens/${m.id}/imagem" alt="Imagem da conversa" loading="lazy" />`:''}${escapeHtml(m.conteudo || (m.tipo!=='TEXTO'?`[${m.tipo}]`:''))}<small>${escapeHtml(date(m.data_mensagem || m.created_at))} · ${escapeHtml(m.status)}</small>${m.erro?`<small class="text-danger">${escapeHtml(m.erro)}</small>`:''}</article>`).join('');
         if(older)target.scrollTop+=target.scrollHeight-previousHeight;else if(atBottom || messages.size<=50)target.scrollTop=target.scrollHeight;
         on('#older-messages','click',()=>loadMessages(true));
+        if(!older && !document.hidden && (atBottom || messages.size<=50))await api(`atendimento/conversas/${id}/ler`,'POST',{});
     };
     on('#conversation-search','submit',()=>refresh(1));
     actions('#conversations',async(_,id)=>{
-        selected=conversations.find(c=>c.id===Number(id));messages=new Map();messagePage=1;
+        if(selected)drafts.set(selected.id,form.texto.value);
+        selected=conversations.find(c=>c.id===Number(id));if(!selected)return;selectionVersion++;messages=new Map();messagePage=1;form.texto.value=drafts.get(selected.id)||'';
         $('#chat-header').textContent=`${selected.nome || selected.nome_whatsapp || selected.telefone} · ${selected.telefone} · ${selected.instancia}`;
-        $('#chat-messages').innerHTML=empty('Carregando mensagens…');$('#chat-text').disabled=false;$('button',form).disabled=false;
-        await loadMessages();await api(`atendimento/conversas/${id}/ler`,'POST',{});await refresh();
+        $('#chat-messages').innerHTML=empty('Carregando mensagens…');$('#chat-text').disabled=false;$('button',form).disabled=sending;
+        await loadMessages();await refresh();
     });
-    on('#chat-form','submit',async()=>{if(!selected)return;const id=selected.id;const result=await api(`atendimento/conversas/${id}/mensagens`,'POST',{texto:form.texto.value});if(result.status==='ERRO')throw new Error(result.erro || 'Não foi possível enviar a mensagem.');form.reset();await loadMessages();await refresh();});
+    on('#chat-form','submit',async()=>{
+        if(!selected || sending)return;
+        const id=selected.id,text=form.texto.value,version=selectionVersion;
+        if(!text.trim())throw new Error('Digite uma mensagem.');
+        sending=true;
+        try {
+            const result=await api(`atendimento/conversas/${id}/mensagens`,'POST',{texto:text});
+            if(selected?.id===id && selectionVersion===version)await loadMessages();
+            if(result.status==='ERRO')throw new Error(result.erro || 'Não foi possível enviar a mensagem.');
+            if(drafts.get(id)===text)drafts.delete(id);
+            if(selected?.id===id && form.texto.value===text)form.texto.value='';
+            await refresh();
+        } finally {sending=false;}
+    });
     const syncStatus=async()=>{const result=await api('atendimento/sincronizar/status');$('#sync-status').textContent=`${result.status} · ${number(result.total_conversas)} conversas · ${number(result.total_mensagens)} mensagens${result.erro?' · '+result.erro:''}`;$('#sync').disabled=['DISPARADO','EM_ANDAMENTO'].includes(result.status);};
     on('#sync','click',async()=>{await api('atendimento/sincronizar?forcar='+$('#force-sync').checked,'POST',{instancia:$('#sync-instance').value || null});feedback('Sincronização iniciada.');await syncStatus();});
-    await refresh();await accountOptions('#sync-instance',false);await syncStatus();
-    poll(async()=>{try{await refresh();await loadMessages();await syncStatus();}catch(e){$('#sync-status').textContent='Falha ao atualizar: '+e.message;}},5000);
+    await refresh();
+    try {await accountOptions('#sync-instance',false);} catch(e){feedback(e.message,true);}
+    try {await syncStatus();} catch(e){$('#sync-status').textContent=e.message;}
+    poll(async()=>{try{await loadMessages();await refresh();await syncStatus();}catch(e){$('#sync-status').textContent='Falha ao atualizar: '+e.message;}},5000);
 }
 const pages={Index:dashboard,WhatsApp:whatsapp,Enviar:send,Massa:massa,Modelos:modelos,Historico:historico,Usuarios:usuarios,Configuracoes:configuracoes,Atendimento:atendimento};
 async function init(){try{await pages[pageName]?.();}catch(e){feedback(e.message,true);}if(!['Index','WhatsApp'].includes(pageName)){try{await loadAccounts();}catch{if(controller.signal.aborted)return;$('#connection-badge').textContent='Conexão indisponível';}}poll(async()=>{try{await loadAccounts();}catch{if(controller.signal.aborted)return;$('#connection-badge').textContent='Conexão indisponível';}},30000);}

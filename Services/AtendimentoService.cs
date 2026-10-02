@@ -467,7 +467,7 @@ public class AtendimentoService : IAtendimentoService
         var telFinal = telOk ? telNormalizado : telefone;
 
         var direcao = fromMe ? DirecaoMensagem.Enviada : DirecaoMensagem.Recebida;
-        var nomeWhatsApp = ExtrairNomeRemetente(msg);
+        var nomeWhatsApp = fromMe ? null : ExtrairNomeRemetente(msg);
         var fotoUrl = default(string);
         var status = fromMe ? StatusMensagem.Enviada : StatusMensagem.Entregue;
 
@@ -492,7 +492,7 @@ public class AtendimentoService : IAtendimentoService
             evolutionId: evolutionId,
             telefone: telFinal,
             instancia: instancia,
-            tipo: TipoMensagem.Texto,
+            tipo: ExtrairTipoMensagem(msg),
             direcao: direcao,
             conteudo: texto,
             status: status,
@@ -709,9 +709,31 @@ public class AtendimentoService : IAtendimentoService
     {
         if (msg.TryGetProperty("pushName", out var pn)) return pn.GetString();
         if (msg.TryGetProperty("notify", out var nt)) return nt.GetString();
-        if (msg.TryGetProperty("sender", out var sender) && sender.TryGetProperty("pushName", out var spn))
+        if (msg.TryGetProperty("sender", out var sender) && sender.ValueKind == JsonValueKind.Object && sender.TryGetProperty("pushName", out var spn))
             return spn.GetString();
         return null;
+    }
+
+    private static string ExtrairTipoMensagem(JsonElement msg)
+    {
+        if (!msg.TryGetProperty("message", out var message)) return TipoMensagem.Texto;
+        for (var depth = 0; depth < 5 && message.ValueKind == JsonValueKind.Object; depth++)
+        {
+            if (message.TryGetProperty("imageMessage", out _)) return TipoMensagem.Imagem;
+            if (message.TryGetProperty("documentMessage", out _)) return TipoMensagem.Documento;
+            if (message.TryGetProperty("audioMessage", out _)) return TipoMensagem.Audio;
+            if (message.TryGetProperty("videoMessage", out _)) return TipoMensagem.Video;
+            var unwrapped = false;
+            foreach (var wrapper in new[] { "ephemeralMessage", "viewOnceMessage", "viewOnceMessageV2", "documentWithCaptionMessage" })
+                if (message.TryGetProperty(wrapper, out var inner) && inner.ValueKind == JsonValueKind.Object && inner.TryGetProperty("message", out var content))
+                {
+                    message = content;
+                    unwrapped = true;
+                    break;
+                }
+            if (!unwrapped) break;
+        }
+        return TipoMensagem.Texto;
     }
 
     private static string? ExtrairStatusDeUpdate(JsonElement msg)
@@ -734,6 +756,9 @@ public class AtendimentoService : IAtendimentoService
     private static string? ExtrairTelefoneDoJid(string? jid)
     {
         if (string.IsNullOrWhiteSpace(jid)) return null;
+        var domain = jid.Contains('@') ? jid[(jid.IndexOf('@') + 1)..] : null;
+        if (domain != null && !domain.Equals("s.whatsapp.net", StringComparison.OrdinalIgnoreCase) && !domain.Equals("c.us", StringComparison.OrdinalIgnoreCase)) return null;
+        jid = jid.Split('@')[0].Split(':')[0];
         var span = jid.AsSpan();
         var arroba = span.IndexOf('@');
         var parte = arroba >= 0 ? span.Slice(0, arroba) : span;
@@ -762,13 +787,6 @@ public class AtendimentoService : IAtendimentoService
                 Erro = "Sincronização já está em andamento."
             };
 
-        if (!forcar && string.Equals(statusAtual.Status, "OK", StringComparison.OrdinalIgnoreCase)
-            && statusAtual.FinalizadoEm.HasValue
-            && (DateTime.Now - statusAtual.FinalizadoEm.Value).TotalHours < 48)
-        {
-            return statusAtual;
-        }
-
         if (string.IsNullOrWhiteSpace(instancia))
             instancia = _evolutionOptions.Instance;
         if (string.IsNullOrWhiteSpace(instancia))
@@ -778,7 +796,7 @@ public class AtendimentoService : IAtendimentoService
             return new SincroniaStatusResponse { Status = "ERRO", Erro = err };
         }
 
-        _monitor.MarcarInicio();
+        if (!_monitor.MarcarInicio()) return _monitor.UltimoStatus;
         _ = PersistirMonitorAsync(safe: true);
         var totalContatos = 0;
         var totalConversas = 0;
@@ -827,7 +845,7 @@ public class AtendimentoService : IAtendimentoService
             try
             {
                 conversas = (await _evolution.ListarConversasEvolutionAsync(instancia))
-                    .Take(150).ToList();
+                    .Take(forcar ? int.MaxValue : 150).ToList();
                 ct.ThrowIfCancellationRequested();
                 totalConversas = conversas.Count;
                 _monitor.AtualizarContadores(totalContatos, totalConversas, 0);
@@ -873,7 +891,7 @@ public class AtendimentoService : IAtendimentoService
                         {
                             ct.ThrowIfCancellationRequested();
                             var (msgsPagina, temMais) = await _evolution.ListarPaginaMensagensEvolutionAsync(instancia, conv.remoteJid, page, 100);
-                            if (msgsPagina.Count == 0) break;
+                            if (msgsPagina.Count == 0 && !temMais) break;
                             foreach (var msgElem in msgsPagina)
                             {
                                 try
@@ -890,7 +908,7 @@ public class AtendimentoService : IAtendimentoService
                                         evolutionId: evolutionId,
                                         telefone: telFinal,
                                         instancia: instancia,
-                                        tipo: TipoMensagem.Texto,
+                                        tipo: ExtrairTipoMensagem(msgElem),
                                         direcao: direcao,
                                         conteudo: texto,
                                         status: status,
@@ -914,8 +932,8 @@ public class AtendimentoService : IAtendimentoService
                             }
                             _monitor.AtualizarContadores(totalContatos, totalConversas, totalMensagens, conversasComErro);
                             _ = PersistirMonitorAsync(safe: true);
-                            if (!temMais || msgsPagina.Count < 100) break;
-                            if (page >= 20) break; // segurança: 2000 msgs max por conversa
+                            if (!temMais) break;
+                            if (!forcar && page >= 20) break; // A sincronização completa usa o limite de tempo da operação.
                             page++;
                         }
                     }
@@ -927,7 +945,7 @@ public class AtendimentoService : IAtendimentoService
                 }
             }
 
-            var okFinal = erroGlobal == null && conversasComErro < Math.Max(1, (totalConversas * 30) / 100);
+            var okFinal = erroGlobal == null && conversasComErro == 0;
             if (!okFinal && erroGlobal == null && conversasComErro > 0)
                 erroGlobal = $"Concluído parcialmente — {conversasComErro} conversa(s) com falha.";
             _monitor.MarcarFim(okFinal, erroGlobal, conversasComErro);

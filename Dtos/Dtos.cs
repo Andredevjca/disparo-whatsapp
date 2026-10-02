@@ -677,6 +677,7 @@ public class SincroniaStatusResponse
 public class SincroniaMonitor
 {
     private readonly object _lock = new();
+    private bool _inicializado;
     private SincroniaStatusResponse _ultimo = new() { Status = "PENDENTE" };
 
     public SincroniaStatusResponse UltimoStatus
@@ -688,10 +689,12 @@ public class SincroniaMonitor
 
     public DateTime? IniciadoEm { get; private set; }
 
-    public void MarcarInicio()
+    public bool MarcarInicio()
     {
         lock (_lock)
         {
+            if (EstaRodando) return false;
+            _inicializado = true;
             EstaRodando = true;
             IniciadoEm = DateTime.Now;
             _ultimo = new SincroniaStatusResponse
@@ -702,6 +705,7 @@ public class SincroniaMonitor
                 TotalConversas = _ultimo.TotalConversas,
                 TotalMensagens = _ultimo.TotalMensagens,
             };
+            return true;
         }
     }
 
@@ -735,6 +739,8 @@ public class SincroniaMonitor
         if (salvo == null) return;
         lock (_lock)
         {
+            if (_inicializado) return;
+            _inicializado = true;
             _ultimo = new SincroniaStatusResponse
             {
                 Status = salvo.Status,
@@ -749,6 +755,12 @@ public class SincroniaMonitor
             IniciadoEm = salvo.IniciadoEm;
             EstaRodando = string.Equals(salvo.Status, "EM_ANDAMENTO", StringComparison.OrdinalIgnoreCase) ||
                           string.Equals(salvo.Status, "SINCRONIZANDO", StringComparison.OrdinalIgnoreCase);
+            if (EstaRodando)
+            {
+                EstaRodando = false;
+                _ultimo.Status = "ERRO";
+                _ultimo.Erro = "A sincronização anterior foi interrompida. Sincronize novamente.";
+            }
         }
     }
 }

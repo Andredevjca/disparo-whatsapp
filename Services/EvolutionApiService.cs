@@ -363,7 +363,7 @@ public class EvolutionApiService : IEvolutionApiService
                     await Task.Delay(3000);
                     continue;
                 }
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                if (response.StatusCode is System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.MethodNotAllowed)
                     return null;
                 response.EnsureSuccessStatusCode();
                 return await response.Content.ReadAsStringAsync();
@@ -374,7 +374,7 @@ public class EvolutionApiService : IEvolutionApiService
                 await Task.Delay(1500);
             }
         }
-        return null;
+        throw new HttpRequestException("Evolution limitou as consultas. Tente sincronizar novamente em alguns instantes.");
     }
 
     private async Task<string?> GetStringComFallbackAsync(string[] endpoints)
@@ -406,7 +406,7 @@ public class EvolutionApiService : IEvolutionApiService
                     await Task.Delay(3000);
                     continue;
                 }
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                if (response.StatusCode is System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.MethodNotAllowed)
                     return null;
                 response.EnsureSuccessStatusCode();
                 return await response.Content.ReadAsStringAsync();
@@ -417,7 +417,7 @@ public class EvolutionApiService : IEvolutionApiService
                 await Task.Delay(1500);
             }
         }
-        return null;
+        throw new HttpRequestException("Evolution limitou as consultas. Tente sincronizar novamente em alguns instantes.");
     }
 
     private async Task<string?> PostStringComFallbackAsync((string endpoint, object? body)[] variantes)
@@ -432,7 +432,7 @@ public class EvolutionApiService : IEvolutionApiService
 
     private static JsonElement RootOrData(JsonDocument doc)
     {
-        if (doc.RootElement.TryGetProperty("data", out var d) && d.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
+        if (doc.RootElement.ValueKind == JsonValueKind.Object && doc.RootElement.TryGetProperty("data", out var d) && d.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
             return d;
         return doc.RootElement;
     }
@@ -440,7 +440,7 @@ public class EvolutionApiService : IEvolutionApiService
     public async Task<List<(string remoteJid, string? pushName, string? nome, string? fotoPerfil)>> ListarContatosEvolutionAsync(string instance)
     {
         var result = new List<(string remoteJid, string? pushName, string? nome, string? fotoPerfil)>();
-        if (string.IsNullOrWhiteSpace(_options.ApiKey) || string.IsNullOrWhiteSpace(instance)) return result;
+        if (string.IsNullOrWhiteSpace(_options.ApiKey) || string.IsNullOrWhiteSpace(instance)) throw new InvalidOperationException("Configure a chave da Evolution e selecione uma conta para sincronizar.");
 
         var instEncoded = Uri.EscapeDataString(instance);
         var endpointsGet = new[]
@@ -450,7 +450,8 @@ public class EvolutionApiService : IEvolutionApiService
             $"contacts/findAllContacts/{instEncoded}",
             $"contacts/findAll?instance={instEncoded}",
         };
-        var content = await GetStringComFallbackAsync(endpointsGet);
+        var content = await PostStringComRetryAsync($"chat/findContacts/{instEncoded}", new { });
+        if (string.IsNullOrWhiteSpace(content)) content = await GetStringComFallbackAsync(endpointsGet);
         if (string.IsNullOrWhiteSpace(content))
         {
             var variantesPost = new (string, object?)[]
@@ -462,14 +463,14 @@ public class EvolutionApiService : IEvolutionApiService
             };
             content = await PostStringComFallbackAsync(variantesPost);
         }
-        if (string.IsNullOrWhiteSpace(content)) return result;
+        if (string.IsNullOrWhiteSpace(content)) throw new HttpRequestException("Nenhuma rota de consulta compatível encontrada na Evolution.");
 
         using var doc = JsonDocument.Parse(content);
         var arr = RootOrData(doc);
         IEnumerable<JsonElement> items;
         if (arr.ValueKind == JsonValueKind.Array) items = arr.EnumerateArray();
-        else if (arr.TryGetProperty("contacts", out var cts) && cts.ValueKind == JsonValueKind.Array) items = cts.EnumerateArray();
-        else return result;
+        else if (arr.ValueKind == JsonValueKind.Object && arr.TryGetProperty("contacts", out var cts) && cts.ValueKind == JsonValueKind.Array) items = cts.EnumerateArray();
+        else throw new InvalidOperationException("Formato de contatos não reconhecido na resposta da Evolution.");
 
         foreach (var it in items)
         {
@@ -502,7 +503,7 @@ public class EvolutionApiService : IEvolutionApiService
     public async Task<List<(string remoteJid, DateTime? ultimaMensagemEm, string? ultimaMensagemTexto, int? totalMensagens)>> ListarConversasEvolutionAsync(string instance)
     {
         var result = new List<(string remoteJid, DateTime? ultimaMensagemEm, string? ultimaMensagemTexto, int? totalMensagens)>();
-        if (string.IsNullOrWhiteSpace(_options.ApiKey) || string.IsNullOrWhiteSpace(instance)) return result;
+        if (string.IsNullOrWhiteSpace(_options.ApiKey) || string.IsNullOrWhiteSpace(instance)) throw new InvalidOperationException("Configure a chave da Evolution e selecione uma conta para sincronizar.");
 
         var instEncoded = Uri.EscapeDataString(instance);
         var endpointsGet = new[]
@@ -512,7 +513,8 @@ public class EvolutionApiService : IEvolutionApiService
             $"chats/findAll/{instEncoded}",
             $"chats/findAll?instance={instEncoded}",
         };
-        var content = await GetStringComFallbackAsync(endpointsGet);
+        var content = await PostStringComRetryAsync($"chat/findChats/{instEncoded}", new { });
+        if (string.IsNullOrWhiteSpace(content)) content = await GetStringComFallbackAsync(endpointsGet);
         if (string.IsNullOrWhiteSpace(content))
         {
             var variantesPost = new (string, object?)[]
@@ -523,14 +525,14 @@ public class EvolutionApiService : IEvolutionApiService
             };
             content = await PostStringComFallbackAsync(variantesPost);
         }
-        if (string.IsNullOrWhiteSpace(content)) return result;
+        if (string.IsNullOrWhiteSpace(content)) throw new HttpRequestException("Nenhuma rota de consulta compatível encontrada na Evolution.");
 
         using var doc = JsonDocument.Parse(content);
         var arr = RootOrData(doc);
         IEnumerable<JsonElement> items;
         if (arr.ValueKind == JsonValueKind.Array) items = arr.EnumerateArray();
-        else if (arr.TryGetProperty("chats", out var cts) && cts.ValueKind == JsonValueKind.Array) items = cts.EnumerateArray();
-        else return result;
+        else if (arr.ValueKind == JsonValueKind.Object && arr.TryGetProperty("chats", out var cts) && cts.ValueKind == JsonValueKind.Array) items = cts.EnumerateArray();
+        else throw new InvalidOperationException("Formato de conversas não reconhecido na resposta da Evolution.");
 
         foreach (var it in items)
         {
@@ -604,7 +606,8 @@ public class EvolutionApiService : IEvolutionApiService
             $"message/list/{instEncoded}/{jidEncoded}?page={page}&perPage={perPage}",
             $"messages/find/{instEncoded}?remoteJid={jidEncoded}&page={page}&perPage={perPage}",
         };
-        var content = await GetStringComFallbackAsync(endpointsGet);
+        var content = await PostStringComRetryAsync($"chat/findMessages/{instEncoded}", new { where = new { key = new { remoteJid } }, page, offset = perPage });
+        if (string.IsNullOrWhiteSpace(content)) content = await GetStringComFallbackAsync(endpointsGet);
         if (string.IsNullOrWhiteSpace(content))
         {
             var variantesPost = new (string, object?)[]
@@ -615,18 +618,33 @@ public class EvolutionApiService : IEvolutionApiService
             };
             content = await PostStringComFallbackAsync(variantesPost);
         }
-        if (string.IsNullOrWhiteSpace(content)) return (list, false);
+        if (string.IsNullOrWhiteSpace(content)) throw new HttpRequestException("Nenhuma rota de mensagens compatível encontrada na Evolution.");
 
         using var doc = JsonDocument.Parse(content);
         var root = RootOrData(doc);
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("messages", out var envelope))
+            root = envelope;
         IEnumerable<JsonElement> items;
         if (root.ValueKind == JsonValueKind.Array) items = root.EnumerateArray();
-        else if (root.TryGetProperty("messages", out var msgs) && msgs.ValueKind == JsonValueKind.Array) items = msgs.EnumerateArray();
-        else if (root.TryGetProperty("rows", out var rows) && rows.ValueKind == JsonValueKind.Array) items = rows.EnumerateArray();
-        else return (list, false);
+        else if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("records", out var records) && records.ValueKind == JsonValueKind.Array) items = records.EnumerateArray();
+        else if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("rows", out var rows) && rows.ValueKind == JsonValueKind.Array) items = rows.EnumerateArray();
+        else throw new InvalidOperationException("Formato de histórico não reconhecido na resposta da Evolution.");
 
-        foreach (var it in items) list.Add(it.Clone());
-        var temMais = list.Count >= perPage;
+        var receivedCount = 0;
+        foreach (var it in items)
+        {
+            receivedCount++;
+            if (it.ValueKind != JsonValueKind.Object) continue;
+            var jid = it.TryGetProperty("key", out var key) ? DisparoApi.Helpers.EvolutionWebhookHelper.Texto(key, "remoteJid") : null;
+            if (jid?.EndsWith("@lid", StringComparison.OrdinalIgnoreCase) == true)
+                jid = DisparoApi.Helpers.EvolutionWebhookHelper.Texto(key, "remoteJidAlt") ?? jid;
+            jid ??= DisparoApi.Helpers.EvolutionWebhookHelper.Texto(it, "remoteJid");
+            if (jid != null && !string.Equals(jid, remoteJid, StringComparison.OrdinalIgnoreCase)) continue;
+            list.Add(it.Clone());
+        }
+        var temMais = receivedCount >= perPage;
+        if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("pages", out var pages) && pages.ValueKind == JsonValueKind.Number && pages.TryGetInt32(out var totalPages))
+            temMais = page < totalPages;
         return (list, temMais);
     }
 }
