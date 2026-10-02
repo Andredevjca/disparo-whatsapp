@@ -39,7 +39,9 @@ public class ImportacaoService : IImportacaoService
             throw new ArgumentException("Nenhuma linha encontrada na planilha");
 
         var headerKeys = rows[0].Keys.ToList();
-        var fTelefone = DetectarColuna(headerKeys, "telefone", "numero", "phone", "celular", "number", "whatsapp", "tel");
+        var fTelefone = DetectarColuna(headerKeys, "telefone", "fone", "numero", "phone", "celular", "number", "whatsapp", "tel");
+        if (fTelefone == null)
+            throw new ArgumentException("Coluna de telefone não encontrada. Inclua uma coluna chamada TELEFONE, FONE, CELULAR ou WHATSAPP.");
         var fNome = DetectarColuna(headerKeys, "nome", "name", "cliente", "pessoa");
         var fEmail = DetectarColuna(headerKeys, "email", "e-mail", "e_mail", "mail", "e mail");
 
